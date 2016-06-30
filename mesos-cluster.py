@@ -59,8 +59,7 @@ def GenerateConfig(context):
               'type': 'ONE_TO_ONE_NAT'
               }],
           'network': GlobalComputeUrl(
-          # TODO make network configureable
-              context.env['project'], 'networks', 'default')
+              context.env['project'], 'networks', context.properties['network'])
           }]
       }
 

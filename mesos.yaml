@@ -22,6 +22,7 @@ resources:
   type:  mesos-cluster.py
   properties:
     zone: us-central1-f
+    network: default
     masterMachineType: n1-standard-1
     slaveMachineType: n1-standard-1
     numberOfSlaves: 3
