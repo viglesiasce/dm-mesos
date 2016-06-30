@@ -4,7 +4,7 @@ This repository contains Deployment Manager template for deploying a scalable
 Mesos cluster. By default, this will deploy a Mesos Cluster with the following
 topology:
 
-![mesos architecture](images/mesos-arch.png)
+![](images/mesos-arch.png)
 
 The control plane is deployed as individual instances with 3 nodes and a quorum
 of 2 set. Marathon is running on all hosts and will redirect requests to the
