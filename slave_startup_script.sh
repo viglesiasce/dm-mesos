@@ -18,6 +18,8 @@
 
 export HOSTNAME=`curl "http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/ip" -H "Metadata-Flavor: Google"`
 export PREFIX=mesos-master
+export MESOS_DNS_VERSION=v0.5.2
+export ZOOKEEPER_URL=zk://${PREFIX}-1:2181,${PREFIX}-2:2181,${PREFIX}-3:2181/mesos
 
 # Install StackDriver Agents
 curl -O https://repo.stackdriver.com/stack-install.sh
@@ -48,11 +50,44 @@ apt-get -y install docker-engine
 service zookeeper stop
 update-rc.d -f zookeeper remove
 
-echo zk://${PREFIX}-1:2181,${PREFIX}-2:2181,${PREFIX}-3:2181/mesos > /etc/mesos/zk
+echo ${ZOOKEEPER_URL} > /etc/mesos/zk
 
 echo ${HOSTNAME} > /etc/mesos-slave/hostname
 echo 'docker,mesos' > /etc/mesos-slave/containerizers
 echo '5mins' > /etc/mesos-slave/executor_registration_timeout
+
+# Mesos DNS
+curl -sLO https://github.com/mesosphere/mesos-dns/releases/download/${MESOS_DNS_VERSION}/mesos-dns-${MESOS_DNS_VERSION}-linux-amd64
+mv mesos-dns-${MESOS_DNS_VERSION}-linux-amd64 /usr/local/bin/mesos-dns
+chmod +x /usr/local/bin/mesos-dns
+cat > /lib/systemd/system/mesos-dns.service <<EOF
+[Unit]
+Description=Mesos DNS
+
+[Service]
+ExecStart=/usr/local/bin/mesos-dns -config=/etc/mesos/dns.json
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+cat > /etc/mesos/dns.json <<EOF
+{
+  "zk": "${ZOOKEEPER_URL}",
+  "masters": ["mesos-master-1:5050", "mesos-master-2:5050", "mesos-master-3:5050"],
+  "refreshSeconds": 60,
+  "ttl": 60,
+  "domain": "mesos",
+  "port": 53,
+  "resolvers": ["169.254.169.254"]
+}
+EOF
+
+systemctl daemon-reload
+systemctl enable mesos-dns.service
+systemctl start mesos-dns.service
+
+sed -i '1s/^/nameserver 127.0.0.1\n /' /etc/resolv.conf
 
 service mesos-master stop
 update-rc.d -f mesos-master remove
